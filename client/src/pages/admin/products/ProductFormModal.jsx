@@ -17,6 +17,24 @@ const SpinnerIcon = () => (
   </svg>
 );
 
+const ImageIcon = () => (
+  <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+  </svg>
+);
+
+const TrashIcon = ({ className }) => (
+  <svg className={className || "w-4 h-4"} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+  </svg>
+);
+
 // Format currency
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -42,6 +60,12 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
     category: '',
     status: 'active',
   });
+  
+  // Image states
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +80,6 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
         // Remove trailing zeroes if it's a whole number
         margin = parseFloat(margin).toString();
       } else if (cost === 0 && price > 0) {
-         // handle edge case where cost is 0 but price is > 0
          margin = '100'; 
       }
 
@@ -70,6 +93,10 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
         category: product.category || '',
         status: product.status || 'active',
       });
+
+      setImagePreview(product.image || '');
+      setImageFile(null);
+      setRemoveImage(false);
     }
   }, [product]);
 
@@ -83,6 +110,39 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError('');
+  };
+
+  // Image handlers
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Kích thước ảnh tối đa là 5MB');
+      return;
+    }
+
+    // Validate type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Chỉ hỗ trợ các định dạng: JPG, JPEG, PNG, WEBP');
+      return;
+    }
+
+    setError('');
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setRemoveImage(false);
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview('');
+    setRemoveImage(true);
+    // Reset file input value
+    const fileInput = document.getElementById('pf-image');
+    if (fileInput) fileInput.value = '';
   };
 
   // Validate form phía frontend
@@ -120,16 +180,21 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
 
     setLoading(true);
     try {
-      const payload = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        price: calculatedPrice,
-        costPrice: cost,
-        stock: formData.stock ? Number(formData.stock) : 0,
-        unit: formData.unit.trim() || 'cái',
-        category: formData.category.trim(),
-        status: isEditing ? formData.status : 'active',
-      };
+      const payload = new FormData();
+      payload.append('name', formData.name.trim());
+      payload.append('description', formData.description.trim());
+      payload.append('price', calculatedPrice);
+      payload.append('costPrice', cost);
+      payload.append('stock', formData.stock ? Number(formData.stock) : 0);
+      payload.append('unit', formData.unit.trim() || 'cái');
+      payload.append('category', formData.category.trim());
+      payload.append('status', isEditing ? formData.status : 'active');
+      
+      if (imageFile) {
+        payload.append('image', imageFile);
+      } else if (removeImage) {
+        payload.append('removeImage', 'true');
+      }
 
       if (isEditing) {
         await updateProduct(product._id, payload);
@@ -176,7 +241,8 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          
           {/* Tên sản phẩm */}
           <div>
             <label htmlFor="pf-name" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -192,6 +258,54 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
               autoFocus
               className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
             />
+          </div>
+
+          {/* Ảnh sản phẩm */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Ảnh sản phẩm
+            </label>
+            <div className="flex items-start gap-4">
+              {/* Preview Box */}
+              <div className="shrink-0 w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center relative group">
+                {imagePreview ? (
+                  <>
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Xóa ảnh"
+                    >
+                      <TrashIcon className="w-5 h-5 text-white" />
+                    </button>
+                  </>
+                ) : (
+                  <ImageIcon />
+                )}
+              </div>
+              
+              {/* Upload Input */}
+              <div className="flex-1 pt-1">
+                <input
+                  type="file"
+                  id="pf-image"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="pf-image"
+                  className="inline-flex items-center gap-2 h-9 px-3 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <UploadIcon />
+                  Chọn ảnh từ máy tính
+                </label>
+                <p className="mt-2 text-xs text-gray-400">
+                  Hỗ trợ JPG, PNG, WEBP. Dung lượng tối đa 5MB.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Mô tả */}

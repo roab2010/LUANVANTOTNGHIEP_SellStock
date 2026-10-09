@@ -131,6 +131,12 @@ const createProduct = async (req, res) => {
       });
     }
 
+    // --- Xử lý ảnh ---
+    let imageUrl = '';
+    if (req.file) {
+      imageUrl = req.file.path;
+    }
+
     // --- Tạo sản phẩm ---
     const product = await Product.create({
       name: name.trim(),
@@ -141,6 +147,7 @@ const createProduct = async (req, res) => {
       unit: unit?.trim() || 'cái',
       category: category?.trim() || '',
       status: status || 'active',
+      image: imageUrl,
     });
 
     res.status(201).json({
@@ -203,6 +210,15 @@ const updateProduct = async (req, res) => {
     if (unit !== undefined) updateData.unit = unit.trim();
     if (category !== undefined) updateData.category = category.trim();
     if (status !== undefined) updateData.status = status;
+
+    // Lấy thông tin sản phẩm cũ để xử lý ảnh (tùy chọn xóa trên cloudinary nếu cần thiết, ở đây tạm thời bỏ qua phần xóa ảnh cũ trên cloudinary để giữ code đơn giản, hoặc có thể thêm thư viện để xóa)
+    // Nếu có file mới tải lên, lấy url mới
+    if (req.file) {
+      updateData.image = req.file.path;
+    } else if (req.body.removeImage === 'true') {
+      // Nếu user chủ động xóa ảnh
+      updateData.image = '';
+    }
 
     const product = await Product.findByIdAndUpdate(
       req.params.id,

@@ -41,6 +41,12 @@ const ChevronRightIcon = () => (
   </svg>
 );
 
+const ImageIcon = () => (
+  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+  </svg>
+);
+
 // ============================================
 // FORMAT HELPERS
 // ============================================
@@ -236,6 +242,7 @@ const ProductsPage = () => {
           <table>
             <thead>
               <tr>
+                <th className="w-16">Ảnh</th>
                 <th>Tên sản phẩm</th>
                 <th>Danh mục</th>
                 <th>Giá bán</th>
@@ -248,6 +255,15 @@ const ProductsPage = () => {
             <tbody>
               {products.map((product) => (
                 <tr key={product._id}>
+                  <td>
+                    <div className="w-12 h-12 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon />
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <div>
                       <p className="font-medium text-gray-900">{product.name}</p>

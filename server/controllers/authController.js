@@ -25,6 +25,15 @@ const register = async (req, res) => {
       });
     }
 
+    const allowedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'edu.vn'];
+    const emailDomain = email.split('@')[1];
+    if (!allowedDomains.includes(emailDomain)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ hỗ trợ đăng ký với các email: ' + allowedDomains.map(d => '@' + d).join(', '),
+      });
+    }
+
     // Kiểm tra độ dài password
     if (password.length < 6) {
       return res.status(400).json({

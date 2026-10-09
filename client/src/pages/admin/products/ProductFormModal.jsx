@@ -17,11 +17,17 @@ const SpinnerIcon = () => (
   </svg>
 );
 
+// Format currency
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(value || 0);
+};
+
 // ============================================
 // PRODUCT FORM MODAL COMPONENT
 // ============================================
-// Template chuẩn cho form modal CRUD.
-// Các module khác (Categories, Suppliers...) sẽ copy và thay đổi fields.
 const ProductFormModal = ({ product, onClose, onSuccess }) => {
   const isEditing = !!product;
 
@@ -29,8 +35,8 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: '',
     costPrice: '',
+    profitMargin: '',
     stock: '',
     unit: 'cái',
     category: '',
@@ -42,11 +48,23 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
   // Load dữ liệu khi chỉnh sửa
   useEffect(() => {
     if (product) {
+      const cost = product.costPrice || 0;
+      const price = product.price || 0;
+      let margin = '';
+      if (cost > 0) {
+        margin = (((price - cost) / cost) * 100).toFixed(2);
+        // Remove trailing zeroes if it's a whole number
+        margin = parseFloat(margin).toString();
+      } else if (cost === 0 && price > 0) {
+         // handle edge case where cost is 0 but price is > 0
+         margin = '100'; 
+      }
+
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        price: product.price?.toString() || '',
-        costPrice: product.costPrice?.toString() || '',
+        costPrice: cost.toString() || '',
+        profitMargin: margin,
         stock: product.stock?.toString() || '',
         unit: product.unit || 'cái',
         category: product.category || '',
@@ -54,6 +72,11 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
       });
     }
   }, [product]);
+
+  // Derived price
+  const cost = Number(formData.costPrice) || 0;
+  const margin = Number(formData.profitMargin) || 0;
+  const calculatedPrice = cost + (cost * margin) / 100;
 
   // Xử lý thay đổi input
   const handleChange = (e) => {
@@ -68,20 +91,21 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
       setError('Vui lòng nhập tên sản phẩm');
       return false;
     }
-    if (!formData.price && formData.price !== '0') {
-      setError('Vui lòng nhập giá bán');
+    
+    const costPriceNum = Number(formData.costPrice);
+    if (formData.costPrice === '' || costPriceNum < 10000 || costPriceNum > 1000000000) {
+      setError('Giá nhập phải từ 10,000 đến 1,000,000,000 ₫');
       return false;
     }
-    if (Number(formData.price) < 0) {
-      setError('Giá bán không được âm');
+
+    const profitMarginNum = Number(formData.profitMargin);
+    if (formData.profitMargin === '' || profitMarginNum < 0 || profitMarginNum > 1000) {
+      setError('Phần trăm lợi nhuận phải từ 0 đến 1000%');
       return false;
     }
-    if (formData.costPrice && Number(formData.costPrice) < 0) {
-      setError('Giá nhập không được âm');
-      return false;
-    }
+
     if (formData.stock && Number(formData.stock) < 0) {
-      setError('Số lượng tồn kho không được âm');
+      setError('Số lượng không được âm');
       return false;
     }
     return true;
@@ -99,12 +123,12 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        price: Number(formData.price),
-        costPrice: formData.costPrice ? Number(formData.costPrice) : 0,
+        price: calculatedPrice,
+        costPrice: cost,
         stock: formData.stock ? Number(formData.stock) : 0,
         unit: formData.unit.trim() || 'cái',
         category: formData.category.trim(),
-        status: formData.status,
+        status: isEditing ? formData.status : 'active',
       };
 
       if (isEditing) {
@@ -186,45 +210,54 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
             />
           </div>
 
-          {/* Giá bán + Giá nhập */}
+          {/* Giá nhập + Phần trăm lợi nhuận */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="pf-price" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Giá bán (₫) <span className="text-danger-500">*</span>
-              </label>
-              <input
-                id="pf-price"
-                name="price"
-                type="number"
-                min="0"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="0"
-                className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
-              />
-            </div>
-            <div>
               <label htmlFor="pf-costPrice" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Giá nhập (₫)
+                Giá nhập (₫) <span className="text-danger-500">*</span>
               </label>
               <input
                 id="pf-costPrice"
                 name="costPrice"
                 type="number"
-                min="0"
+                min="10000"
+                max="1000000000"
                 value={formData.costPrice}
                 onChange={handleChange}
                 placeholder="0"
                 className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
               />
             </div>
+            <div>
+              <label htmlFor="pf-profitMargin" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Lợi nhuận (%) <span className="text-danger-500">*</span>
+              </label>
+              <input
+                id="pf-profitMargin"
+                name="profitMargin"
+                type="number"
+                min="0"
+                max="1000"
+                step="0.01"
+                value={formData.profitMargin}
+                onChange={handleChange}
+                placeholder="Ví dụ: 20"
+                className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
+              />
+            </div>
           </div>
 
-          {/* Tồn kho + Đơn vị */}
+          {/* Giá bán preview */}
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600">Giá bán dự kiến:</span>
+            <span className="text-lg font-bold text-teal-600">{formatCurrency(calculatedPrice)}</span>
+          </div>
+
+          {/* Số lượng + Đơn vị */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="pf-stock" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Tồn kho
+                Số lượng
               </label>
               <input
                 id="pf-stock"
@@ -255,7 +288,7 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
 
           {/* Danh mục + Trạng thái */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
+            <div className={!isEditing ? "col-span-2" : ""}>
               <label htmlFor="pf-category" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Danh mục
               </label>
@@ -269,21 +302,23 @@ const ProductFormModal = ({ product, onClose, onSuccess }) => {
                 className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
               />
             </div>
-            <div>
-              <label htmlFor="pf-status" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Trạng thái
-              </label>
-              <select
-                id="pf-status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
-              >
-                <option value="active">Đang bán</option>
-                <option value="inactive">Ngừng bán</option>
-              </select>
-            </div>
+            {isEditing && (
+              <div>
+                <label htmlFor="pf-status" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Trạng thái
+                </label>
+                <select
+                  id="pf-status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full h-10 px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-primary-500 focus:ring-[3px] focus:ring-primary-500/15 transition-all duration-200"
+                >
+                  <option value="active">Đang bán</option>
+                  <option value="inactive">Ngừng bán</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

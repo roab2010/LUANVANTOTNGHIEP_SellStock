@@ -73,6 +73,7 @@ const AdminLayout = () => {
           </svg>
         </div>
         <span className="text-base font-bold text-gray-900 tracking-tight">SellStock</span>
+        <span className="text-[9px] ml-auto bg-teal-50 text-teal-600 font-semibold px-1.5 py-0.5 rounded">Admin</span>
       </div>
 
       {/* Navigation */}

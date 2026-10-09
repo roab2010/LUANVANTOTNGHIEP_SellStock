@@ -240,7 +240,7 @@ const ProductsPage = () => {
                 <th>Danh mục</th>
                 <th>Giá bán</th>
                 <th>Giá nhập</th>
-                <th>Tồn kho</th>
+                <th>Số lượng</th>
                 <th>Trạng thái</th>
                 <th className="text-right">Thao tác</th>
               </tr>
@@ -284,13 +284,15 @@ const ProductsPage = () => {
                       >
                         <EditIcon />
                       </button>
-                      <button
-                        onClick={() => setDeleteConfirm(product)}
-                        className="p-2 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-all duration-150"
-                        title="Xóa"
-                      >
-                        <TrashIcon />
-                      </button>
+                      {product.status === 'inactive' && (
+                        <button
+                          onClick={() => setDeleteConfirm(product)}
+                          className="p-2 text-gray-400 hover:text-danger-600 hover:bg-danger-50 rounded-lg transition-all duration-150"
+                          title="Xóa"
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

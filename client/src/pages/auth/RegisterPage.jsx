@@ -75,6 +75,13 @@ const RegisterPage = () => {
       setError('Email không đúng định dạng');
       return false;
     }
+
+    const allowedDomains = ['gmail.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'edu.vn'];
+    const emailDomain = formData.email.split('@')[1];
+    if (!allowedDomains.includes(emailDomain)) {
+      setError('Chỉ hỗ trợ đăng ký với các email: ' + allowedDomains.map(d => '@' + d).join(', '));
+      return false;
+    }
     if (!formData.password) {
       setError('Vui lòng nhập mật khẩu');
       return false;

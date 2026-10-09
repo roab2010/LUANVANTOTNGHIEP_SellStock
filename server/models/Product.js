@@ -19,8 +19,8 @@ const productSchema = new mongoose.Schema(
     },
     costPrice: {
       type: Number,
-      default: 0,
-      min: [0, 'Giá nhập không được âm'],
+      default: 10000,
+      min: [10000, 'Giá nhập phải từ 10,000 ₫ trở lên'],
     },
     stock: {
       type: Number,
